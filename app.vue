@@ -11,17 +11,13 @@
 </template>
 
 <script lang="ts" setup>
-import ndarray from "ndarray";
-import ops from "ndarray-ops";
-
 import mpegts from 'mpegts.js'
 import { Tensor } from 'onnxruntime-web';
 import * as ort from 'onnxruntime-web';
-const videoEle = ref<HTMLVideoElement>()
-
-// import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.js";
-// // set wasm path override
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+
+
+const videoEle = ref<HTMLVideoElement>()
 const videoContainer = document.createElement('video',)
 const flvPlayer = ref()
 const initFlv = () => {
@@ -38,19 +34,11 @@ const initFlv = () => {
     flvPlayer.value.attachMediaElement(videoContainer)
 
 
-    // document.body.appendChild(videoContainer);
-
-
-
-
     flvPlayer.value.load()
-    // audioTrack = videoContainer.captureStream().getAudioTracks()[0]
-    // console.log(audioTrack)
     // videoContainer.muted = true; // 静音
 
 
 
-    // const trackProcessor = new MediaStreamTrackProcessor(videoTrack);
   }
 }
 
@@ -86,7 +74,7 @@ videoContainer.addEventListener('playing', () => {
     .pipeTo(trackGenerator.writable);
   const processedStream = new MediaStream();
   processedStream.addTrack(trackGenerator);
-  
+
   currentProcessedStream = processedStream;
   videoEle.value?.addEventListener("loadedmetadata", () => {
     videoEle.value?.play();
@@ -106,32 +94,7 @@ function shapeTransform(width: number, height: number): Array<number> {
   return [wNew, hNew, scaleW, scaleH];
 }
 
-const ensureRGB = (imageData: ImageData) => {
-  let width;
-  let height;
 
-
-  const dataTensor = ndarray(new Float32Array(data), [width, height, 4]);
-  const dataProcessedTensor = ndarray(new Float32Array(width * height * 3), [
-    1,
-    3,
-    width,
-    height,
-  ]);
-
-  ops.assign(
-    dataProcessedTensor.pick(0, 0, null, null),
-    dataTensor.pick(null, null, 0)
-  );
-  ops.assign(
-    dataProcessedTensor.pick(0, 1, null, null),
-    dataTensor.pick(null, null, 1)
-  );
-  ops.assign(
-    dataProcessedTensor.pick(0, 2, null, null),
-    dataTensor.pick(null, null, 2)
-  );
-}
 
 const ImgResizer = (img: VideoFrame, width: number, height: number): ImageData => {
   const canvas = document.createElement('canvas')
@@ -184,7 +147,6 @@ const transformer = new TransformStream({
 
     );
     // Predict
-
     // Blur Target
     // const newFrame;
     controller.enqueue(newFrame);
@@ -205,39 +167,7 @@ async function main() {
   // it has 1 output: 'c'(float32, 3x3)
   const session = await ort.InferenceSession.create('/centerface.onnx',);
 
-  // const htmlTensor = await ort.Tensor.fromImage(, {
-  //   norm: {
-  //     mean: 1, bias: 0
-  //   }
-  // },);
 
-
-
-
-
-
-
-
-
-  //   // prepare inputs. a tensor need its corresponding TypedArray as data
-  //   const dataA = Float32Array.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-  //   const dataB = Float32Array.from([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]);
-  //   const tensorA = new ort.Tensor('float32', dataA, [3, 4]);
-  //   const tensorB = new ort.Tensor('float32', dataB, [4, 3]);
-
-  //   // prepare feeds. use model input names as keys.
-  //   const feeds = { a: tensorA, b: tensorB };
-
-  //   // feed inputs and run
-  // const results = await session.run(feeds);
-
-  //   // read from results
-  //   const dataC = results.c.data;
-  //   document.write(`data of result tensor 'c': ${dataC}`);
-
-  // } catch (e) {
-  //   document.write(`failed to inference ONNX model: ${e}.`);
-  // }
 }
 
 onMounted(() => {
