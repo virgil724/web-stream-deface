@@ -7,8 +7,8 @@
   <!-- <img src="/TEST.webp" id="testjpg"> -->
   <button @click="play" :disabled="!session">Play</button>
   <button @click="mute">mute</button>
-  {{ output }}
-
+  <!-- {{ output }} -->
+  {{ out_process }}
 </template>
 
 <script lang="ts" setup>
@@ -16,8 +16,13 @@ import mpegts from 'mpegts.js'
 import { Tensor } from 'onnxruntime-web';
 import * as ort from 'onnxruntime-web/webgpu';
 import { decode } from './utils/centerface_utils';
+import * as StackBlur from 'stackblur-canvas';
+
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
-const output = ref()
+const output = ref({ dets: [], lmss: [] })
+const out_process = computed(
+  () => (output.value['dets'].length)
+)
 
 const videoEle = ref<HTMLVideoElement>()
 const videoContainer = document.createElement('video',)
@@ -97,19 +102,15 @@ function shapeTransform(width: number, height: number): Array<number> {
   return [wNew, hNew, scaleW, scaleH];
 }
 
-
-
+const canvas = new OffscreenCanvas(1920, 1080);
+const ctx = canvas.getContext("2d");
 const ImgResizer = (img: VideoFrame, width: number, height: number): ImageData => {
-  const canvas = document.createElement('canvas')
   // set W-H
   // const { width, height } = img.codedRect as { width: number, height: number }
   //  calculate new w-h
   // const [wNew, hNew, scaleW, scaleH] = shapeTransform(width, height)
 
-  canvas.width = width
-  canvas.height = height
-  canvas.getContext('2d')?.drawImage(img, 0, 0, width, height)
-  const ctx = canvas.getContext('2d')
+  ctx.drawImage(img, 0, 0, width, height)
   if (ctx !== null) {
     return ctx.getImageData(0, 0, width, height)
   }
@@ -118,11 +119,18 @@ const ImgResizer = (img: VideoFrame, width: number, height: number): ImageData =
   }
 }
 
-const canvas = new OffscreenCanvas(1920, 1080);
-const ctx = canvas.getContext("2d");
-const genFrame = async (bitmap, timestamp) => {
+
+const genFrame = async (dets, bitmap, timestamp) => {
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
+  ctx.fillStyle = "rgba(200, 0, 0, 0.5)";
+  dets.forEach(element => {
+    // StackBlur.canvasRGB(canvas, ~~element[0], ~~element[1], ~~(element[2] - element[0]), ~~(element[3] - element[1]),60)
+
+    ctx.fillRect(~~element[0], ~~element[1], ~~(element[2] - element[0]), ~~(element[3] - element[1]));
+  });
+
+
   const newBitmap = await createImageBitmap(canvas);
   return new VideoFrame(newBitmap, { timestamp });
 
@@ -161,32 +169,35 @@ const transformer = new TransformStream({
     const resizeImg = ImgResizer(videoFrame, wNew, hNew)
 
     videoFrame.close();
-
+    // Predict
     const processedInput = await Tensor.fromImage(resizeImg, {
       norm: {
         mean: 1, bias: 0
       }
     })
 
-
     const feeds = { "input.1": processedInput }
-
     const out = await session.value?.run(feeds)
+    // processedInput.dispose()
+
     const { 537: heatmap, 538: scale, 539: offset, 540: lms } = out
     const rs_heatmap = reshapeArray(heatmap.data, heatmap.dims)
     const rs_scale = reshapeArray(scale.data, scale.dims)
     const rs_offset = reshapeArray(offset.data, offset.dims)
     const rs_lms = reshapeArray(lms.data, lms.dims)
     const size = [hNew, wNew]
-    let [dets, lmss] = decode(rs_heatmap, rs_scale, rs_offset, rs_lms, size, 0.1)
+    let [dets, lmss] = decode(rs_heatmap, rs_scale, rs_offset, rs_lms, size, 0.5)
     output.value = { dets, lmss }
+    // Blur Target
+
     const newFrame = await genFrame(
+      dets,
       bitmap,
       timestamp,
+
     );
-    // Predict
-    // Blur Target
-    // const newFrame;
+
+
     controller.enqueue(newFrame);
 
   },
