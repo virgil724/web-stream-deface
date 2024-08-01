@@ -5,21 +5,24 @@
   </div>
   <canvas id='canvas'></canvas>
   <!-- <img src="/TEST.webp" id="testjpg"> -->
-  <button @click="play">Play</button>
+  <button @click="play" :disabled="!session">Play</button>
   <button @click="mute">mute</button>
+  {{ output }}
 
 </template>
 
 <script lang="ts" setup>
 import mpegts from 'mpegts.js'
 import { Tensor } from 'onnxruntime-web';
-import * as ort from 'onnxruntime-web';
+import * as ort from 'onnxruntime-web/webgpu';
+import { decode } from './utils/centerface_utils';
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
-
+const output = ref()
 
 const videoEle = ref<HTMLVideoElement>()
 const videoContainer = document.createElement('video',)
 const flvPlayer = ref()
+const session = ref<ort.InferenceSession>()
 const initFlv = () => {
 
   if (videoContainer != null && mpegts.isSupported()) {
@@ -124,6 +127,30 @@ const genFrame = async (bitmap, timestamp) => {
   return new VideoFrame(newBitmap, { timestamp });
 
 }
+function reshapeArray(data, dims) {
+  const [B, C, H, W] = dims;
+  let index = 0;
+  const reshaped = [];
+
+  for (let b = 0; b < B; b++) {
+    const batch = [];
+    for (let c = 0; c < C; c++) {
+      const channel = [];
+      for (let h = 0; h < H; h++) {
+        const row = [];
+        for (let w = 0; w < W; w++) {
+          row.push(data[index]);
+          index++;
+        }
+        channel.push(row);
+      }
+      batch.push(channel);
+    }
+    reshaped.push(batch);
+  }
+
+  return reshaped;
+}
 const transformer = new TransformStream({
   async transform(videoFrame: VideoFrame, controller) {
     const bitmap = await createImageBitmap(videoFrame);
@@ -141,10 +168,21 @@ const transformer = new TransformStream({
       }
     })
 
+
+    const feeds = { "input.1": processedInput }
+
+    const out = await session.value?.run(feeds)
+    const { 537: heatmap, 538: scale, 539: offset, 540: lms } = out
+    const rs_heatmap = reshapeArray(heatmap.data, heatmap.dims)
+    const rs_scale = reshapeArray(scale.data, scale.dims)
+    const rs_offset = reshapeArray(offset.data, offset.dims)
+    const rs_lms = reshapeArray(lms.data, lms.dims)
+    const size = [hNew, wNew]
+    let [dets, lmss] = decode(rs_heatmap, rs_scale, rs_offset, rs_lms, size, 0.1)
+    output.value = { dets, lmss }
     const newFrame = await genFrame(
       bitmap,
       timestamp,
-
     );
     // Predict
     // Blur Target
@@ -165,14 +203,18 @@ async function main() {
   // the model in this example contains a single MatMul node
   // it has 2 inputs: 'a'(float32, 3x4) and 'b'(float32, 4x3)
   // it has 1 output: 'c'(float32, 3x3)
-  const session = await ort.InferenceSession.create('/centerface.onnx',);
+  const model_options = {
+    executionProviders: ['webgpu'] // 使用 WebGPU
+  };
+  const sess = await ort.InferenceSession.create('/centerface[3].onnx', model_options);
+  session.value = sess
 
 
 }
 
 onMounted(() => {
   initFlv()
-  // main()
+  main()
 
 })
 onUnmounted(() => {
