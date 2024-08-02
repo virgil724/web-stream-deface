@@ -7,6 +7,7 @@
   <!-- <img src="/TEST.webp" id="testjpg"> -->
   <button @click="play" :disabled="!session">Play</button>
   <button @click="mute">mute</button>
+  <button @click="pause">pause</button>
   <!-- {{ output }} -->
   {{ out_process }}
 </template>
@@ -35,7 +36,8 @@ const initFlv = () => {
       type: 'flv',
       isLive: true,
       hasAudio: true,
-      url: "http://192.168.88.105:8081/live/test.flv?token=test"
+      //url: "http://192.168.88.105:8081/live/test.flv?token=test"
+      url: "teset2.flv"
 
     })
 
@@ -54,6 +56,12 @@ const play = () => {
   flvPlayer.value.play()
 
 }
+
+const pause = () => {
+  flvPlayer.value.stop()
+
+}
+
 
 let currentStream;
 let currentProcessedStream;
@@ -93,8 +101,8 @@ videoContainer.addEventListener('playing', () => {
 
 function shapeTransform(width: number, height: number): Array<number> {
   // Make spatial dims divisible by 32
-  let wNew = Math.ceil(width / 32) * 32;
-  let hNew = Math.ceil(height / 32) * 32;
+  let wNew = Math.ceil(width / 32) * 16;
+  let hNew = Math.ceil(height / 32) * 16;
 
   const scaleW = wNew / width;
   const scaleH = hNew / height;
@@ -127,7 +135,7 @@ const genFrame = async (dets, bitmap, timestamp) => {
   dets.forEach(element => {
     // StackBlur.canvasRGB(canvas, ~~element[0], ~~element[1], ~~(element[2] - element[0]), ~~(element[3] - element[1]),60)
 
-    ctx.fillRect(~~element[0], ~~element[1], ~~(element[2] - element[0]), ~~(element[3] - element[1]));
+    ctx.fillRect(~~element[0]*2, ~~element[1]*2, ~~((element[2] - element[0])*2), ~~((element[3] - element[1])*2));
   });
 
 
