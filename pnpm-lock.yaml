@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@longlost/webgl-filter':
+        specifier: ^1.1.0
+        version: 1.1.0
       mpegts.js:
         specifier: ^1.7.3
         version: 1.7.3
@@ -662,6 +665,9 @@ packages:
 
   '@kwsites/promise-deferred@1.1.1':
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
+
+  '@longlost/webgl-filter@1.1.0':
+    resolution: {integrity: sha512-V6E2WJphnR1EaYjVddTckGGFrscuH7FYCq06ZdwtCVNdHdkCSq1XhMbCJp45mf44zBkaYAIzJkiD/k/D1Mmyqw==}
 
   '@mapbox/node-pre-gyp@1.0.11':
     resolution: {integrity: sha512-Yhlar6v9WQgUp/He7BdgzOz8lqMQ8sU+jkCq7Wx8Myc5YFJLbEe7lgui/V7G1qB1DJykHSGwreceSaD60Y0PUQ==}
@@ -3740,6 +3746,8 @@ snapshots:
       - supports-color
 
   '@kwsites/promise-deferred@1.1.1': {}
+
+  '@longlost/webgl-filter@1.1.0': {}
 
   '@mapbox/node-pre-gyp@1.0.11':
     dependencies:

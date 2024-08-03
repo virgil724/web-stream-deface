@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@longlost/webgl-filter": "^1.1.0",
     "mpegts.js": "^1.7.3",
     "nuxt": "^3.12.4",
     "onnxruntime-web": "^1.18.0",
