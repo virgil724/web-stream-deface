@@ -1,6 +1,24 @@
+<style>
+.float {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 1920px;
+  height: 1080px;
+  /* background-color: aqua; */
+  z-index: 1;
+  /* opacity: 50%; */
+}
+
+.parent-container {
+  position: relative;
+}
+</style>
 <template>
-  <div>
-    <video id="video" width="1920" height="1080" controls ref="videoEle" muted="muted"></video>
+  <div class="parent-container">
+    <video id="video" width="1920" height="1080" controls ref="videoEle" muted></video>
+    <!-- <canvas class="float" id="top"></canvas> -->
+    <video id="top" class="float" controls muted></video>
     <!-- <button @click="load"></button> -->
   </div>
   <canvas id='canvas'> </canvas>
@@ -14,8 +32,7 @@
 </template>
 
 <script lang="ts" setup>
-import mpegts from 'mpegts.js'
-import { Tensor } from 'onnxruntime-web';
+import mpegts from 'mpegts.js';
 import * as ort from 'onnxruntime-web/webgpu';
 import { decode } from './utils/centerface_utils';
 
@@ -28,31 +45,31 @@ const out_process = computed(
 )
 
 const videoEle = ref<HTMLVideoElement>()
-const videoContainer = document.createElement('video',)
 const flvPlayer = ref()
 const session = ref<ort.InferenceSession>()
 const initFlv = () => {
 
-  if (videoContainer != null && mpegts.isSupported()) {
+  if (videoEle.value != null && mpegts.isSupported()) {
     flvPlayer.value = mpegts.createPlayer({
       type: 'flv',
-      isLive: true,
-      hasAudio: true,
+      // isLive: true,
+      // hasAudio: false,
+      // url: "/206779_small.mp4"
       url: "http://192.168.88.105:8081/live/test.flv?token=test"
-      // url: "teset2.flv"
 
     })
 
-    flvPlayer.value.attachMediaElement(videoContainer)
+    flvPlayer.value.attachMediaElement(videoEle.value)
 
-
+    // document.getElementById('teest')?.appendChild(videoContainer)
     flvPlayer.value.load()
     // videoContainer.muted = true; // 静音
+  };
 
 
 
-  }
 }
+
 
 const play = () => {
   flvPlayer.value.play()
@@ -76,33 +93,6 @@ const stopMediaTracks = stream => {
     track.stop();
   });
 };
-
-videoContainer.addEventListener('playing', () => {
-  // stopMediaTracks(currentProcessedStream);
-  // stopMediaTracks(currentStream);
-
-  console.log('play')
-  const stream = videoContainer.captureStream();
-  const videoTrack = stream.getVideoTracks()[0];
-  // const audioTrack = stream.getAudioTracks()[0]
-  window.stream = stream
-  currentStream = stream
-
-  const trackProcessor = new MediaStreamTrackProcessor({ track: videoTrack })
-  const trackGenerator = new MediaStreamTrackGenerator({ kind: "video" });
-  trackProcessor.readable
-    .pipeThrough(transformer)
-    .pipeTo(trackGenerator.writable);
-  const processedStream = new MediaStream();
-  processedStream.addTrack(trackGenerator);
-
-  currentProcessedStream = processedStream;
-  videoEle.value?.addEventListener("loadedmetadata", () => {
-    videoEle.value?.play();
-  });
-  videoEle.value.srcObject = processedStream;
-
-})
 
 function shapeTransform(width: number, height: number): Array<number> {
   // Make spatial dims divisible by 32
@@ -137,26 +127,36 @@ const genFrame = async (dets, bitmap, timestamp) => {
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
-  // ctx.fillStyle = "rgba(200, 0, 0, 0.5)";
-  dets.forEach(element => {
-    let Crop = roundBounds({
-      x: element[0] * 2,
-      y: element[1] * 2,
-      width: (element[2] - element[0]) * 2,
-      height: (element[3] - element[1]) * 2
-    });
-    let blurcanvas = copyCanvas(Crop, canvas)
-    // let t = document.getElementById('canvas')
-    // t.width = Crop.width
-    // t.height = Crop.height
-    // t.getContext('2d').drawImage(blurcanvas, 0, 0)
-    blurcanvas = blurCanvas(blurcanvas)
-    applyCanvas(ctx, blurcanvas, Crop)
-    // StackBlur.canvasRGB(canvas, ~~element[0], ~~element[1], ~~(element[2] - element[0]), ~~(element[3] - element[1]),60)
+  const All_crop = dets.map((element) => roundBounds({
+    x: element[0] * 2,
+    y: element[1] * 2,
+    width: (element[2] - element[0]) * 2,
+    height: (element[3] - element[1]) * 2
+  }));
+  const small_crop = All_crop.filter(crop => crop.width < 90 || crop.height < 90)
+  small_crop.forEach(element => {
+    ctx.fillStyle = 'rgba(200,0,0,1)'
+    const { x, y, width, height } = element
+    ctx?.fillRect(x, y, width, height)
 
-    // ctx.fillRect(~~element[0] * 2, ~~element[1] * 2, ~~((element[2] - element[0]) * 2), ~~((element[3] - element[1]) * 2));
   });
+  const corp_arr = All_crop.filter(crop => crop.width >= 90 && crop.height >= 90)
+  const bitmapPromises = corp_arr.map(crop => {
+    const { x, y, width, height } = crop;
+    return createImageBitmap(canvas, x, y, width, height);
+  });
+  const faces = await Promise.all(bitmapPromises);
+  const drawBlurPromises = faces.map((face) => {
+    return drawBlur(face)
+  })
+  const blurFaces = await Promise.all(drawBlurPromises)
+  for (let index = 0; index < blurFaces.length; index++) {
+    const element = blurFaces[index];
+    const { x, y, width, height } = corp_arr[index];
+    ctx?.drawImage(element, 0, 0, width, height, x, y, width, height)
+  }
 
+  //   ctx.fillRect(~~element[0] * 2, ~~element[1] * 2, ~~((element[2] - element[0]) * 2), ~~((element[3] - element[1]) * 2));
 
   const newBitmap = await createImageBitmap(canvas);
   return new VideoFrame(newBitmap, { timestamp });
@@ -198,8 +198,7 @@ const transformer = new TransformStream({
     videoFrame.close();
     // Predict
     const processedInput = bufferToTensor(resizeImg.data, {
-      width: wNew, height: hNew
-      ,
+      width: wNew, height: hNew,
       norm: {
         mean: 1, bias: 0
       },
@@ -220,7 +219,7 @@ const transformer = new TransformStream({
     const rs_offset = reshapeArray(offset.data, offset.dims)
     const rs_lms = reshapeArray(lms.data, lms.dims)
     const size = [hNew, wNew]
-    let [dets, lmss] = decode(rs_heatmap, rs_scale, rs_offset, rs_lms, size, 0.5)
+    let [dets, lmss] = decode(rs_heatmap, rs_scale, rs_offset, rs_lms, size, 0.2)
     output.value = { dets, lmss }
     // Blur Target
 
@@ -242,26 +241,48 @@ const transformer = new TransformStream({
 })
 
 async function main() {
-  // try {
-  // create a new session and load the specific model.
-  //
-  // the model in this example contains a single MatMul node
-  // it has 2 inputs: 'a'(float32, 3x4) and 'b'(float32, 4x3)
-  // it has 1 output: 'c'(float32, 3x3)
   const model_options = {
-    executionProviders: ['webgpu'],
-    excutionMode: 'parallel' // 使用 WebGPU,
-    // , enableGraphCapture: true
+    executionProviders: ['webgpu'],// 使用 WebGPU,
+    excutionMode: 'parallel'
   };
   const sess = await ort.InferenceSession.create('/centerface[3].onnx', model_options);
   session.value = sess
-
-
 }
 
 onMounted(() => {
   initFlv()
   main()
+  videoEle.value.addEventListener('playing', () => {
+    const videoContainer = document.getElementById('top',)
+    videoContainer.muted = true
+
+    // stopMediaTracks(currentProcessedStream);
+    // stopMediaTracks(currentStream);
+
+    console.log('play')
+    const stream = videoEle.value.captureStream();
+    const videoTrack = stream.getVideoTracks()[0];
+    // const audioTrack = stream.getAudioTracks()[0]
+    window.stream = stream
+    currentStream = stream
+
+    const trackProcessor = new MediaStreamTrackProcessor({ track: videoTrack })
+    const trackGenerator = new MediaStreamTrackGenerator({ kind: "video" });
+    trackProcessor.readable
+      .pipeThrough(transformer)
+      .pipeTo(trackGenerator.writable);
+    const processedStream = new MediaStream();
+    processedStream.addTrack(trackGenerator);
+
+    currentProcessedStream = processedStream;
+    videoContainer?.addEventListener("loadedmetadata", () => {
+      videoContainer?.play();
+    });
+    videoContainer.srcObject = processedStream;
+
+  })
+
+
 
 })
 onUnmounted(() => {

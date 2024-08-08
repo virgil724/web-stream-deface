@@ -12,8 +12,21 @@ export const copyCanvas = (corpBound, orig_cav) => {
   const { x, y, width, height } = corpBound
   const canvas = new OffscreenCanvas(width, height)
   const ctx = canvas.getContext('2d')
+  ctx.filter = "blur(16px)"
+
+
   ctx?.drawImage(orig_cav, x, y, width, height, 0, 0, width, height)
   return canvas
+}
+
+export const drawBlur = async (bitmap: ImageBitmap): Promise<ImageBitmap> => {
+  const { height, width } = bitmap
+  const canvas = new OffscreenCanvas(width, height)
+  const ctx = canvas.getContext('2d')
+  ctx.filter = 'blur(20px)'
+  ctx?.drawImage(bitmap, 0, 0, width, height)
+  return createImageBitmap(canvas)
+
 }
 export const applyCanvas = (ctx: OffscreenCanvasRenderingContext2D, blurCav: OffscreenCanvas, corpBound) => {
   const { x, y, width, height } = corpBound
