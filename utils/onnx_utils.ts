@@ -1,4 +1,7 @@
 import { Tensor } from "onnxruntime-web";
+import * as gpuort from 'onnxruntime-web/webgpu'
+import * as ort from 'onnxruntime-web'
+
 export const bufferToTensor = (buffer: Uint8ClampedArray | undefined, options: any): Tensor => {
   if (buffer === undefined) {
     throw new Error('Image buffer must be defined');
@@ -77,3 +80,48 @@ export const bufferToTensor = (buffer: Uint8ClampedArray | undefined, options: a
     new Tensor('float32', float32Data, [1, 3, height, width]);
   return outputTensor;
 };
+
+export const createSession = async (backend: String) => {
+
+
+  const model_options = {
+    executionProviders: [backend],// 使用 WebGPU,
+  };
+  let sess;
+  if (backend === 'webgpu') {
+    gpuort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+    gpuort.env.webgpu.powerPreference = 'high-performance'
+  
+    sess = await gpuort.InferenceSession.create('/centerface[3].onnx', model_options);
+  } else {
+    sess = await ort.InferenceSession.create('/centerface[3].onnx', model_options);
+
+  }
+  return sess
+}
+
+
+export function reshapeArray(data, dims) {
+  const [B, C, H, W] = dims;
+  let index = 0;
+  const reshaped = [];
+
+  for (let b = 0; b < B; b++) {
+    const batch = [];
+    for (let c = 0; c < C; c++) {
+      const channel = [];
+      for (let h = 0; h < H; h++) {
+        const row = [];
+        for (let w = 0; w < W; w++) {
+          row.push(data[index]);
+          index++;
+        }
+        channel.push(row);
+      }
+      batch.push(channel);
+    }
+    reshaped.push(batch);
+  }
+
+  return reshaped;
+}
