@@ -11,10 +11,28 @@
   },
   "dependencies": {
     "@longlost/webgl-filter": "^1.1.0",
+    "@radix-icons/vue": "^1.0.0",
+    "@vee-validate/zod": "^4.13.2",
+    "@vueuse/core": "^10.11.0",
+    "@vueuse/integrations": "^10.11.1",
+    "async-validator": "^4",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.426.0",
     "mpegts.js": "^1.7.3",
     "nuxt": "^3.12.4",
     "onnxruntime-web": "^1.18.0",
+    "radix-vue": "^1.9.3",
+    "shadcn-nuxt": "^0.10.4",
     "stackblur-canvas": "^2.7.0",
-    "vue": "latest"
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "vee-validate": "^4.13.2",
+    "vue": "latest",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.1",
+    "typescript": "^5.5.4"
   }
 }

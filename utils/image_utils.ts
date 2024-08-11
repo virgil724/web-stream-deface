@@ -39,3 +39,32 @@ export const roundBounds = (bounds) =>
     copy[property] = Math.round(bounds[property]);
     return copy;
   }, {});
+
+
+export function shapeTransform(width: number, height: number): Array<number> {
+  // Make spatial dims divisible by 32
+  let wNew = Math.ceil(width / 32) * 16;
+  let hNew = Math.ceil(height / 32) * 16;
+
+  const scaleW = wNew / width;
+  const scaleH = hNew / height;
+
+  return [wNew, hNew, scaleW, scaleH];
+}
+
+
+export const ImgResizer = (img: ImageBitmap, width: number, height: number): ImageData => {
+  // set W-H
+  // const { width, height } = img.codedRect as { width: number, height: number }
+  //  calculate new w-h
+  // const [wNew, hNew, scaleW, scaleH] = shapeTransform(width, height)
+  const canvas = new OffscreenCanvas(width, height)
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(img, 0, 0, width, height)
+  if (ctx !== null) {
+    return ctx.getImageData(0, 0, width, height)
+  }
+  else {
+    throw new Error("canvas is empty");
+  }
+}
