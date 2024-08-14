@@ -86,15 +86,16 @@ export const createSession = async (backend: String) => {
 
   const model_options = {
     executionProviders: [backend],// 使用 WebGPU,
+    executionMode: 'parallel'
   };
   let sess;
   if (backend === 'webgpu') {
     gpuort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
     gpuort.env.webgpu.powerPreference = 'high-performance'
-  
-    sess = await gpuort.InferenceSession.create('/centerface[3].onnx', model_options);
+
+    sess = await gpuort.InferenceSession.create('/centerface_mod2.onnx', model_options);
   } else {
-    sess = await ort.InferenceSession.create('/centerface[3].onnx', model_options);
+    sess = await ort.InferenceSession.create('/centerface_mod2.onnx', model_options);
 
   }
   return sess
