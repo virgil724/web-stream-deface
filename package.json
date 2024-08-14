@@ -21,6 +21,7 @@
     "lucide-vue-next": "^0.426.0",
     "mpegts.js": "^1.7.3",
     "nuxt": "^3.12.4",
+    "nuxt-gtag": "^2.1.0",
     "onnxruntime-web": "^1.18.0",
     "radix-vue": "^1.9.3",
     "shadcn-nuxt": "^0.10.4",
