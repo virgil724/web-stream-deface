@@ -42,18 +42,43 @@ interface Props {
 
 const { video, back } = defineProps<Props>()
 
+let retryCount = 0;
+const maxDelay = 60000; // 最大延遲時間(毫秒)
 
 const loadStream = (url?: string, streamType?: StreamType) => {
   if (video_ref.value != null && mpegts.isSupported()) {
     flvPlayer.value = mpegts.createPlayer({
       type: streamType || 'flv',
       isLive: true,
-      // hasAudio: false,
+      hasAudio: true,
       // url: "/206779_small.mp4"
       url: url || "http://192.168.88.105:8081/live/test.flv?token=test"
     })
+
+    flvPlayer.value.on(mpegts.Events.LOADING_COMPLETE, (e) => {
+      console.log('加載被中斷');
+      retryCount++;
+
+      const delay = Math.min(1000 * Math.pow(2, retryCount), maxDelay);
+      console.log(`將在 ${delay / 1000} 秒後重試 (第 ${retryCount} 次)`);
+      setTimeout(() => {
+        console.log('嘗試重新加載');
+        loadVideo() // 假設這是重新加載的方法
+        if (showBlur.value == true) {
+          showBlur.value = false
+          video_ref.value.addEventListener('playing', () => {
+            showBlur.value = true
+            retryCount = 0
+          })
+
+        }
+
+      }, delay);
+    });
+
     flvPlayer.value.attachMediaElement(video_ref.value)
     flvPlayer.value.load()
+    flvPlayer.value.play()
   }
 
 }
@@ -66,6 +91,7 @@ const loadFile = (file: File) => {
     onUnmounted(() => URL.revokeObjectURL(url));
   }
 };
+
 
 const loadCapture = (stream: MediaStream) => {
   if (video_ref.value) {
