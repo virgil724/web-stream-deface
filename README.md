@@ -73,3 +73,9 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+
+1. 音訊權限
+![alt text](image-1.png)
+2. 不安全權限
+![alt text](image.png)
