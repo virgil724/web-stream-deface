@@ -43,8 +43,8 @@ export const roundBounds = (bounds) =>
 
 export function shapeTransform(width: number, height: number): Array<number> {
   // Make spatial dims divisible by 32
-  let wNew = Math.ceil(width / 32) * 16;
-  let hNew = Math.ceil(height / 32) * 16;
+  let wNew = Math.ceil(width / 64) * 32;
+  let hNew = Math.ceil(height / 64) * 32;
 
   const scaleW = wNew / width;
   const scaleH = hNew / height;
