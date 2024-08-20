@@ -43,7 +43,7 @@ interface Props {
 const { video, back } = defineProps<Props>()
 
 let retryCount = 0;
-const maxDelay = 60000; // 最大延遲時間(毫秒)
+const maxDelay = 30000; // 最大延遲時間(毫秒)
 
 const loadStream = (url?: string, streamType?: StreamType) => {
   if (video_ref.value != null && mpegts.isSupported()) {
@@ -59,11 +59,15 @@ const loadStream = (url?: string, streamType?: StreamType) => {
       console.log('加載被中斷');
       retryCount++;
 
-      const delay = Math.min(1000 * Math.pow(2, retryCount), maxDelay);
+      const delay = Math.max(5000, Math.min(1000 * Math.pow(2, retryCount), maxDelay));
+
       console.log(`將在 ${delay / 1000} 秒後重試 (第 ${retryCount} 次)`);
       setTimeout(() => {
         console.log('嘗試重新加載');
         loadVideo() // 假設這是重新加載的方法
+        // LUL 這是有問題的阿XDD
+
+        // 重新加載過 只要撥放 => +上blur
         if (showBlur.value == true) {
           showBlur.value = false
           video_ref.value.addEventListener('playing', () => {
