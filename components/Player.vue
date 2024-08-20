@@ -67,8 +67,11 @@ const loadStream = (url?: string, streamType?: StreamType) => {
         if (showBlur.value == true) {
           showBlur.value = false
           video_ref.value.addEventListener('playing', () => {
-            showBlur.value = true
-            retryCount = 0
+            setTimeout(() => {
+              showBlur.value = true
+              retryCount = 0
+            }, 250)
+
           })
 
         }
