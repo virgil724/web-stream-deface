@@ -138,10 +138,18 @@ const back = () => {
 }
 const { backend } = inject(backend_provide) as BackendContext;
 
+const sess = ref<InferenceSession | null>()
 
 onMounted(async () => {
+  // TODO 這個要先拿到視訊鏡頭權限
+  sess.value = await createSession(backend.value)
+
+
   cameraOption.value = (await navigator.mediaDevices.enumerateDevices()).filter((value) => value.kind === 'videoinput')
 })
+
+provide(onnx_provide, sess)
+
 onUnmounted(() => {
   stream.value = undefined
 })

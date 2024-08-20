@@ -6,7 +6,7 @@
 import type { InferenceSession } from 'onnxruntime-web';
 const { backend } = inject(backend_provide) as BackendContext
 const videoRef = ref()
-const sess = ref<InferenceSession | null>()
+const sess = inject(onnx_provide)
 const props = defineProps<{
   stream: MediaStream
 }>()
@@ -122,13 +122,10 @@ const processStream = () => {
 
 onMounted(async () => {
 
-  sess.value = await createSession(backend.value)
   processStream()
 })
 
-onUnmounted(() => {
-  sess.value?.release()
-})
+
 
 
 </script>
