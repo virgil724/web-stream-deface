@@ -1,7 +1,7 @@
 <template>
 
-  <div>
-    <Tabs default-value="stream" v-model:model-value="tabs" class="w-[80vw]">
+  <div class="container mx-auto p-4 max-w-6xl">
+    <Tabs default-value="stream" v-model:model-value="tabs" class="w-full">
       <TabsList class="flex flex-row ">
         <TabsTrigger v-for='item in InputList' :value="item.title" class="flex-auto">
           {{ item.title }}
@@ -9,8 +9,8 @@
       </TabsList>
 
       <TabsContent v-for='item in InputList' :value="item.title">
-        <Card class="w-full aspect-video">
-          <CardContent class=" flex flex-col pt-5 gap-2">
+        <Card class="w-full">
+          <CardContent class="flex flex-col pt-5 gap-2 items-center">
             <div v-if="item.title == VideoType.Capture" class="flex gap-3">
 
               <Select @update:model-value="camChange">
@@ -79,7 +79,7 @@ const cameraOption = ref<MediaDeviceInfo[]>()
 
 const rule: Rules = {
   url: [
-    { type: 'url', required: true }
+    { type: 'url', required: false }
   ]
 }
 const stream_url = reactive({ url: '' })
@@ -94,7 +94,7 @@ const InputList = computed(() => {
   })
 
 })
-const tabs = ref<String>('stream')
+const tabs = ref<String>('capture')
 const video = computed<Video>(
   () => {
     const type = tabs.value.toString() as VideoType
@@ -141,11 +141,32 @@ const { backend } = inject(backend_provide) as BackendContext;
 const sess = ref<InferenceSession | null>()
 
 onMounted(async () => {
-  // TODO 這個要先拿到視訊鏡頭權限
-  sess.value = await createSession(backend.value)
+  try {
+    sess.value = await createSession(backend.value)
+    console.log('ONNX session created successfully')
+  } catch (error) {
+    console.error('Failed to initialize ONNX session:', error)
+  }
 
-
-  cameraOption.value = (await navigator.mediaDevices.enumerateDevices()).filter((value) => value.kind === 'videoinput')
+  // Try to initialize camera separately
+  try {
+    // Request camera permission first
+    await navigator.mediaDevices.getUserMedia({ video: true })
+    
+    cameraOption.value = (await navigator.mediaDevices.enumerateDevices()).filter((value) => value.kind === 'videoinput')
+    
+    // Auto select first camera
+    if (cameraOption.value.length > 0) {
+      const firstCamera = cameraOption.value[0]
+      stream.value = await getStream(firstCamera.deviceId)
+      console.log('Camera initialized successfully')
+    } else {
+      console.warn('No cameras found')
+    }
+  } catch (error) {
+    console.warn('Camera not available:', error.message)
+    // App can still work with file/stream input even without camera
+  }
 })
 
 provide(onnx_provide, sess)

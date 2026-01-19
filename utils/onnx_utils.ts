@@ -1,5 +1,4 @@
 import { Tensor } from "onnxruntime-web";
-import * as gpuort from 'onnxruntime-web/webgpu'
 import * as ort from 'onnxruntime-web'
 
 export const bufferToTensor = (buffer: Uint8ClampedArray | undefined, options: any): Tensor => {
@@ -82,23 +81,50 @@ export const bufferToTensor = (buffer: Uint8ClampedArray | undefined, options: a
 };
 
 export const createSession = async (backend: String) => {
-
-
-  const model_options = {
-    executionProviders: [backend],// 使用 WebGPU,
-    executionMode: 'parallel'
-  };
-  let sess;
-  if (backend === 'webgpu') {
-    gpuort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
-    gpuort.env.webgpu.powerPreference = 'high-performance'
-
-    sess = await gpuort.InferenceSession.create('/centerface_mod2.onnx', model_options);
-  } else {
-    sess = await ort.InferenceSession.create('/centerface_mod2.onnx', model_options);
-
+  let executionProviders: string[];
+  
+  switch (backend) {
+    case 'webgpu':
+      executionProviders = ['webgpu', 'webgl', 'wasm']; // Fallback chain
+      break;
+    case 'webgl':
+      executionProviders = ['webgl', 'wasm']; // Fallback chain
+      break;
+    case 'cpu':
+    default:
+      executionProviders = ['wasm'];
+      break;
   }
-  return sess
+
+  // Set WASM paths to CDN for better compatibility
+  ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";
+  
+  // Configure WebGPU specific settings
+  if (backend === 'webgpu') {
+    ort.env.webgpu.validateInputContent = false; // For better performance
+    ort.env.webgpu.powerPreference = 'high-performance';
+  }
+  
+  const model_options = {
+    executionProviders,
+    executionMode: 'sequential' as const,
+    graphOptimizationLevel: backend === 'webgpu' ? 'all' as const : 'basic' as const
+  };
+  
+  try {
+    const sess = await ort.InferenceSession.create('/centerface.onnx', model_options);
+    return sess;
+  } catch (error) {
+    // If WebGPU fails, fallback to WebGL or WASM
+    if (backend === 'webgpu' && executionProviders.includes('webgpu')) {
+      console.warn('WebGPU failed, falling back to WebGL');
+      return createSession('webgl');
+    } else if (backend === 'webgl' && executionProviders.includes('webgl')) {
+      console.warn('WebGL failed, falling back to CPU');
+      return createSession('cpu');
+    }
+    throw error;
+  }
 }
 
 

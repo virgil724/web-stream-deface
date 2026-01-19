@@ -32,6 +32,7 @@
 <script lang="ts" setup>
 import { Progress } from '~/components/ui/progress';
 import type { BackendContext } from '~/utils/provide_keys';
+import { createSession } from '~/utils/onnx_utils';
 
 
 
@@ -47,37 +48,60 @@ watchEffect((cleanupFn) => {
   cleanupFn(() => clearInterval(timer))
 })
 async function testWebGpu() {
-  if (!navigator.gpu) {
-    throw Error("WebGPU not supported.");
-  }
-
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) {
-    throw Error("Couldn't request WebGPU adapter.");
-  }
   try {
+    // Check if WebGPU is available
+    if (!navigator.gpu) {
+      console.warn("WebGPU not supported in this browser.");
+      return;
+    }
+
+    // Request adapter
+    const adapter = await navigator.gpu.requestAdapter({
+      powerPreference: 'high-performance'
+    });
+    
+    if (!adapter) {
+      console.warn("Couldn't request WebGPU adapter.");
+      return;
+    }
+
+    // Test device creation
+    const device = await adapter.requestDevice();
+    if (!device) {
+      console.warn("Couldn't create WebGPU device.");
+      return;
+    }
+    
+    // Test ONNX session creation
     const sess = await createSession('webgpu');
     sess.release();
+    
+    // Clean up
+    device.destroy();
+    
+    options.value.push('webgpu')
+    console.log("WebGPU backend available and working");
   } catch (error) {
-    throw Error(error)
+    console.warn("WebGPU backend test failed:", error);
   }
-  options.value.push('webgpu')
 }
-function testWebGL() {
-  const canvas = document.createElement("canvas");
-  // Initialize the GL context
-  const gl = canvas.getContext("webgl");
+async function testWebGL() {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl");
 
-  // Only continue if WebGL is available and working
-  if (gl === null) {
-    alert(
-      "Unable to initialize WebGL. Your browser or machine may not support it.",
-    );
-    return;
+    if (gl === null) {
+      console.warn("WebGL not supported");
+      return;
+    }
+    
+    const sess = await createSession('webgl');
+    sess.release();
+    options.value.push('webgl')
+    console.log("WebGL backend available");
+  } catch (error) {
+    console.warn("WebGL backend failed:", error);
   }
-  options.value.push('webgl')
-
-
 }
 
 
@@ -85,10 +109,14 @@ function testWebGL() {
 
 onMounted(async () => {
   await testWebGpu()
-  testWebGL()
+  await testWebGL()
+  
+  if (options.value.length === 0) {
+    console.log("Falling back to CPU backend");
+    options.value.push('cpu')
+  }
+  
   endCheck.value = true
-
-
 })
 </script>
 
