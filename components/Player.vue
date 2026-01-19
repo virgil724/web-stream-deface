@@ -121,6 +121,37 @@ if (video_ref.value) {
   stream.value = video_ref.value.captureStream()
 }
 
+const cropMargin = ref([0])
+const showSafeZone = ref(false)
+
+const cropStyle = computed(() => {
+  const scale = 1 + (cropMargin.value[0] / 100)
+  return {
+    transform: `scale(${scale})`
+  }
+})
+
+const safeZoneStyle = computed(() => {
+  const margin = cropMargin.value[0]
+  // Adjust safe zone based on crop/zoom if needed, or just static for now
+  return {
+    top: '10%',
+    left: '10%',
+    right: '10%',
+    bottom: '10%',
+    position: 'absolute',
+    border: '2px dashed rgba(255, 255, 255, 0.5)',
+    pointerEvents: 'none',
+    zIndex: 2,
+    display: 'flex',
+    alignItems: 'start',
+    justifyContent: 'start',
+    padding: '8px',
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: '12px'
+  }
+})
+
 interface Props {
   video: Video;
   back: Function
