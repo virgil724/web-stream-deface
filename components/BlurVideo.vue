@@ -4,40 +4,143 @@
 
 <script lang="ts" setup>
 import { getMultiModelDetection, destroyMultiModelDetection, autoSelectBestModel, type ModelType } from '~/utils/multi-model-detection'
+import type { MaskType } from '~/utils/mask-types'
+
 const { backend } = inject(backend_provide) as BackendContext
 const videoRef = ref()
 const props = defineProps<{
   stream: MediaStream
+  maskType?: MaskType
 }>()
+
 let multiModelDetection = null
 let currentModel: ModelType | null = null
 const canvas = new OffscreenCanvas(0, 0);
 const ctx = canvas.getContext("2d");
 
-const genFrame = async (dets, bitmap, timestamp) => {
-  // Skip processing if no faces detected
+// Emoji options for face masking
+const emojiList = ['😀', '😎', '🙂', '😊', '🤖', '👽', '🎭', '🐱']
+
+// Apply blur effect to a region
+const applyBlur = (x: number, y: number, width: number, height: number) => {
+  if (!ctx) return
+  // Use pixelation as blur approximation (OffscreenCanvas doesn't support filter)
+  const pixelSize = Math.max(8, Math.floor(Math.min(width, height) / 8))
+  const imageData = ctx.getImageData(x, y, width, height)
+  const data = imageData.data
+  
+  for (let py = 0; py < height; py += pixelSize) {
+    for (let px = 0; px < width; px += pixelSize) {
+      let r = 0, g = 0, b = 0, count = 0
+      
+      for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
+        for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
+          const i = ((py + dy) * width + (px + dx)) * 4
+          r += data[i]
+          g += data[i + 1]
+          b += data[i + 2]
+          count++
+        }
+      }
+      
+      r = Math.floor(r / count)
+      g = Math.floor(g / count)
+      b = Math.floor(b / count)
+      
+      for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
+        for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
+          const i = ((py + dy) * width + (px + dx)) * 4
+          data[i] = r
+          data[i + 1] = g
+          data[i + 2] = b
+        }
+      }
+    }
+  }
+  
+  ctx.putImageData(imageData, x, y)
+}
+
+// Apply pixelate effect
+const applyPixelate = (x: number, y: number, width: number, height: number) => {
+  if (!ctx) return
+  const pixelSize = Math.max(12, Math.floor(Math.min(width, height) / 6))
+  const imageData = ctx.getImageData(x, y, width, height)
+  const data = imageData.data
+  
+  for (let py = 0; py < height; py += pixelSize) {
+    for (let px = 0; px < width; px += pixelSize) {
+      const i = (py * width + px) * 4
+      const r = data[i], g = data[i + 1], b = data[i + 2]
+      
+      for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
+        for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
+          const j = ((py + dy) * width + (px + dx)) * 4
+          data[j] = r
+          data[j + 1] = g
+          data[j + 2] = b
+        }
+      }
+    }
+  }
+  
+  ctx.putImageData(imageData, x, y)
+}
+
+// Apply solid color block
+const applySolid = (x: number, y: number, width: number, height: number) => {
+  if (!ctx) return
+  ctx.fillStyle = 'rgba(30, 41, 59, 0.95)'
+  ctx.fillRect(x, y, width, height)
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'
+  ctx.lineWidth = 2
+  ctx.strokeRect(x, y, width, height)
+}
+
+// Apply emoji mask
+const applyEmoji = (x: number, y: number, width: number, height: number, faceIndex: number) => {
+  if (!ctx) return
+  const emoji = emojiList[faceIndex % emojiList.length]
+  const size = Math.min(width, height)
+  ctx.font = `${size}px sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(emoji, x + width / 2, y + height / 2)
+}
+
+const genFrame = async (dets: number[][], bitmap: ImageBitmap, timestamp: number) => {
   if (dets.length === 0) {
     return new VideoFrame(bitmap, { timestamp });
   }
 
   ctx?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  
+  const maskType = props.maskType || 'blur'
 
-  // Show all detected faces with red boxes for testing
-  for (const det of dets) {
-    const x = Math.max(0, det[0])
-    const y = Math.max(0, det[1])
-    const width = Math.min(canvas.width - x, det[2] - det[0])
-    const height = Math.min(canvas.height - y, det[3] - det[1])
+  for (let i = 0; i < dets.length; i++) {
+    const det = dets[i]
+    const x = Math.max(0, Math.floor(det[0]))
+    const y = Math.max(0, Math.floor(det[1]))
+    const width = Math.min(canvas.width - x, Math.floor(det[2] - det[0]))
+    const height = Math.min(canvas.height - y, Math.floor(det[3] - det[1]))
     
     if (width > 10 && height > 10) {
-      // Show all faces with red boxes
-      ctx.fillStyle = 'rgba(255,0,0,0.6)'
-      ctx?.fillRect(x, y, width, height)
-      
-      // Add border for better visibility
-      ctx.strokeStyle = 'rgba(255,0,0,1)'
-      ctx.lineWidth = 2
-      ctx?.strokeRect(x, y, width, height)
+      switch (maskType) {
+        case 'blur':
+          applyBlur(x, y, width, height)
+          break
+        case 'pixelate':
+          applyPixelate(x, y, width, height)
+          break
+        case 'solid':
+          applySolid(x, y, width, height)
+          break
+        case 'emoji':
+          applyEmoji(x, y, width, height, i)
+          break
+        default:
+          applyBlur(x, y, width, height)
+      }
     }
   }
 
@@ -186,16 +289,13 @@ onUnmounted(() => {
 
 
 
+
 </script>
 
 <style scoped>
 .video-player {
-  max-width: 80vw;
-  max-height: 80vh;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
