@@ -257,6 +257,21 @@ onUnmounted(clearVideo);
   overflow: hidden;
 }
 
+/* 全螢幕模式下的樣式調整 */
+.base:fullscreen {
+  border-radius: 0;
+  background-color: black;
+}
+
+.base:fullscreen .video-element {
+  max-height: 100vh;
+  border-radius: 0;
+}
+
+.base:fullscreen .float {
+  border-radius: 0;
+}
+
 .video-element {
   width: 100%;
   height: 100%;

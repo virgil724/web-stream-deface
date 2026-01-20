@@ -1,5 +1,21 @@
 <template>
-  <video ref="videoRef" class="video-player"></video>
+  <div class="blur-video-container">
+    <!-- Loading Overlay -->
+    <div v-if="isModelLoading" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
+        </div>
+        <div class="loading-text">
+          <span class="loading-title">🔒 遮蔽功能啟動中</span>
+          <span class="loading-subtitle">{{ loadingMessage }}</span>
+        </div>
+      </div>
+    </div>
+    <video ref="videoRef" class="video-player"></video>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -18,6 +34,10 @@ let currentModel: ModelType | null = null
 const canvas = new OffscreenCanvas(0, 0);
 const ctx = canvas.getContext("2d");
 
+// Loading state
+const isModelLoading = ref(true)
+const loadingMessage = ref('正在載入人臉偵測模型...')
+
 // Emoji options for face masking
 const emojiList = ['😀', '😎', '🙂', '😊', '🤖', '👽', '🎭', '🐱']
 
@@ -28,11 +48,11 @@ const applyBlur = (x: number, y: number, width: number, height: number) => {
   const pixelSize = Math.max(8, Math.floor(Math.min(width, height) / 8))
   const imageData = ctx.getImageData(x, y, width, height)
   const data = imageData.data
-  
+
   for (let py = 0; py < height; py += pixelSize) {
     for (let px = 0; px < width; px += pixelSize) {
       let r = 0, g = 0, b = 0, count = 0
-      
+
       for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
         for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
           const i = ((py + dy) * width + (px + dx)) * 4
@@ -42,11 +62,11 @@ const applyBlur = (x: number, y: number, width: number, height: number) => {
           count++
         }
       }
-      
+
       r = Math.floor(r / count)
       g = Math.floor(g / count)
       b = Math.floor(b / count)
-      
+
       for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
         for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
           const i = ((py + dy) * width + (px + dx)) * 4
@@ -57,7 +77,7 @@ const applyBlur = (x: number, y: number, width: number, height: number) => {
       }
     }
   }
-  
+
   ctx.putImageData(imageData, x, y)
 }
 
@@ -67,12 +87,12 @@ const applyPixelate = (x: number, y: number, width: number, height: number) => {
   const pixelSize = Math.max(12, Math.floor(Math.min(width, height) / 6))
   const imageData = ctx.getImageData(x, y, width, height)
   const data = imageData.data
-  
+
   for (let py = 0; py < height; py += pixelSize) {
     for (let px = 0; px < width; px += pixelSize) {
       const i = (py * width + px) * 4
       const r = data[i], g = data[i + 1], b = data[i + 2]
-      
+
       for (let dy = 0; dy < pixelSize && py + dy < height; dy++) {
         for (let dx = 0; dx < pixelSize && px + dx < width; dx++) {
           const j = ((py + dy) * width + (px + dx)) * 4
@@ -83,7 +103,7 @@ const applyPixelate = (x: number, y: number, width: number, height: number) => {
       }
     }
   }
-  
+
   ctx.putImageData(imageData, x, y)
 }
 
@@ -114,7 +134,7 @@ const genFrame = async (dets: number[][], bitmap: ImageBitmap, timestamp: number
   }
 
   ctx?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  
+
   const maskType = props.maskType || 'blur'
 
   for (let i = 0; i < dets.length; i++) {
@@ -123,7 +143,7 @@ const genFrame = async (dets: number[][], bitmap: ImageBitmap, timestamp: number
     const y = Math.max(0, Math.floor(det[1]))
     const width = Math.min(canvas.width - x, Math.floor(det[2] - det[0]))
     const height = Math.min(canvas.height - y, Math.floor(det[3] - det[1]))
-    
+
     if (width > 10 && height > 10) {
       switch (maskType) {
         case 'blur':
@@ -158,11 +178,11 @@ let workerInitialized = false
 const transformer = new TransformStream({
   async transform(videoFrame: VideoFrame, controller) {
     frameCounter++
-    
+
     const bitmap = await createImageBitmap(videoFrame)
     const timestamp = videoFrame.timestamp
     const { width, height } = videoFrame.codedRect as { width: number, height: number }
-    
+
     // Only resize canvas if dimensions changed
     if (lastCanvasSize.width !== width || lastCanvasSize.height !== height) {
       canvas.width = width
@@ -171,22 +191,22 @@ const transformer = new TransformStream({
     }
 
     let dets = lastDetections
-    
+
     // Real-time detection for immediate response
     if (!processingFrame) {
       processingFrame = true
       try {
         const startTime = performance.now()
-        
+
         // Use full resolution for maximum accuracy
         const detectBitmap = await createImageBitmap(videoFrame)
-        
+
         // Create ImageData for worker
         const tempCanvas = new OffscreenCanvas(detectBitmap.width, detectBitmap.height)
         const tempCtx = tempCanvas.getContext('2d')
         tempCtx?.drawImage(detectBitmap, 0, 0)
         const imageData = tempCtx?.getImageData(0, 0, detectBitmap.width, detectBitmap.height)
-        
+
         let detectionTime = 0
         if (imageData && multiModelDetection && workerInitialized) {
           const result = await multiModelDetection.detectFaces(imageData)
@@ -198,11 +218,11 @@ const transformer = new TransformStream({
           dets = []
           detectionTime = performance.now() - startTime
         }
-        
+
         detectionTimes.push(detectionTime)
         lastDetections = dets
         detectBitmap.close()
-        
+
         // Log performance stats every 5 seconds
         const now = Date.now()
         if (now - lastLogTime > 5000) {
@@ -218,7 +238,7 @@ const transformer = new TransformStream({
           detectionTimes = []
           lastLogTime = now
         }
-        
+
         videoFrame.close();
       } catch (error) {
         console.warn('Face detection failed:', error)
@@ -269,15 +289,30 @@ const processStream = () => {
 
 onMounted(async () => {
   try {
+    isModelLoading.value = true
+    loadingMessage.value = '正在載入人臉偵測模型...'
+
     multiModelDetection = getMultiModelDetection()
+
+    loadingMessage.value = '正在選擇最佳模型...'
     currentModel = await autoSelectBestModel(backend.value)
+
+    loadingMessage.value = '模型載入完成！'
     workerInitialized = true
     console.log(`Auto-selected detection model: ${currentModel}`)
+
+    // Short delay to show completion message
+    await new Promise(resolve => setTimeout(resolve, 300))
+    isModelLoading.value = false
   } catch (error) {
     console.error('Failed to initialize any face detection model:', error)
+    loadingMessage.value = '模型載入失敗，請重試'
     workerInitialized = false
+    // Keep loading overlay visible for 2 seconds on error
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    isModelLoading.value = false
   }
-  
+
   processStream()
 })
 
@@ -293,9 +328,129 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.blur-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .video-player {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.spinner-ring:nth-child(1) {
+  border-top-color: hsl(217, 91%, 60%);
+  animation-delay: 0s;
+}
+
+.spinner-ring:nth-child(2) {
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+  border-right-color: hsl(270, 91%, 60%);
+  animation-delay: 0.15s;
+  animation-direction: reverse;
+}
+
+.spinner-ring:nth-child(3) {
+  width: 60%;
+  height: 60%;
+  top: 20%;
+  left: 20%;
+  border-bottom-color: hsl(326, 91%, 60%);
+  animation-delay: 0.3s;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.loading-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+  letter-spacing: 0.025em;
+}
+
+.loading-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 </style>

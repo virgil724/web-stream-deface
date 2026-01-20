@@ -5,16 +5,16 @@
       <div class="container mx-auto px-4 h-14 flex items-center justify-between max-w-6xl">
         <NuxtLink to="/" class="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           <span class="text-sm font-medium">返回</span>
         </NuxtLink>
-        
+
         <div class="flex items-center gap-2">
           <div class="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
             <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="8" r="5"/>
-              <path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2"/>
+              <circle cx="12" cy="8" r="5" />
+              <path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2" />
             </svg>
           </div>
           <span class="font-semibold text-sm">Face Blur Pro</span>
@@ -28,8 +28,8 @@
     <main class="flex-1 container mx-auto p-4 max-w-4xl animate-fade-in">
       <Tabs default-value="capture" v-model:model-value="tabs" class="w-full">
         <TabsList class="grid w-full grid-cols-3 h-12 p-1 bg-card/50 border border-border rounded-xl mb-4">
-          <TabsTrigger v-for='item in InputList' :key="item.title" :value="item.title" 
-                       class="flex items-center justify-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
+          <TabsTrigger v-for='item in InputList' :key="item.title" :value="item.title"
+            class="flex items-center justify-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
             <component :is="getTabIcon(item.title)" class="w-4 h-4" />
             <span class="hidden sm:inline">{{ getTabLabel(item.title) }}</span>
           </TabsTrigger>
@@ -39,17 +39,20 @@
           <Card class="glass-card min-h-[400px]">
             <CardContent class="flex flex-col p-6">
               <!-- Camera Tab -->
-              <div v-if="item.title == VideoType.Capture && !LoadContent" class="flex flex-col items-center justify-center py-12 gap-6">
+              <div v-if="item.title == VideoType.Capture && !LoadContent"
+                class="flex flex-col items-center justify-center py-12 gap-6">
                 <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center glow-primary">
-                  <svg class="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4zM3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                  <svg class="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.5">
+                    <path
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4zM3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                   </svg>
                 </div>
                 <div class="text-center">
                   <h3 class="text-lg font-semibold text-foreground mb-2">攝像頭即時串流</h3>
                   <p class="text-muted-foreground text-sm max-w-sm">選擇攝像頭並開始即時人臉偵測</p>
                 </div>
-                
+
                 <Select @update:model-value="camChange" class="w-64">
                   <SelectTrigger class="h-11">
                     <SelectValue placeholder="選擇攝像頭" />
@@ -64,60 +67,62 @@
                   </SelectContent>
                 </Select>
 
-                <Button @click="handleLoadClick" :disabled="!stream" 
-                        class="h-11 px-8 bg-primary hover:bg-primary/90">
+                <Button @click="handleLoadClick" :disabled="!stream" class="h-11 px-8 bg-primary hover:bg-primary/90">
                   <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                    <polygon points="5,3 19,12 5,21" fill="currentColor" />
                   </svg>
                   開始偵測
                 </Button>
               </div>
 
               <!-- File Tab -->
-              <div v-else-if="item.title == VideoType.File && !LoadContent" class="flex flex-col items-center justify-center py-12 gap-6">
+              <div v-else-if="item.title == VideoType.File && !LoadContent"
+                class="flex flex-col items-center justify-center py-12 gap-6">
                 <div class="w-20 h-20 rounded-2xl bg-accent/10 flex items-center justify-center glow-accent">
-                  <svg class="w-10 h-10 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <path d="M12 18v-6M9 15l3-3 3 3"/>
+                  <svg class="w-10 h-10 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.5">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14,2 14,8 20,8" />
+                    <path d="M12 18v-6M9 15l3-3 3 3" />
                   </svg>
                 </div>
                 <div class="text-center">
                   <h3 class="text-lg font-semibold text-foreground mb-2">上傳影片檔案</h3>
                   <p class="text-muted-foreground text-sm max-w-sm">拖放或選擇影片檔案進行處理</p>
                 </div>
-                
+
                 <DropZone v-model="file" class="w-full max-w-md" />
 
-                <Button @click="handleLoadClick" :disabled="file.length === 0" 
-                        class="h-11 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Button @click="handleLoadClick" :disabled="file.length === 0"
+                  class="h-11 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
                   <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                    <polygon points="5,3 19,12 5,21" fill="currentColor" />
                   </svg>
                   開始處理
                 </Button>
               </div>
 
               <!-- Stream Tab -->
-              <div v-else-if="item.title == VideoType.Stream && !LoadContent" class="flex flex-col items-center justify-center py-12 gap-6">
+              <div v-else-if="item.title == VideoType.Stream && !LoadContent"
+                class="flex flex-col items-center justify-center py-12 gap-6">
                 <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center glow-primary">
-                  <svg class="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                  <svg class="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <path
+                      d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                   </svg>
                 </div>
                 <div class="text-center">
                   <h3 class="text-lg font-semibold text-foreground mb-2">網路串流</h3>
                   <p class="text-muted-foreground text-sm max-w-sm">輸入 RTSP、HLS 或 FLV 串流網址</p>
                 </div>
-                
-                <Input placeholder="輸入串流 URL" v-model="stream_url.url" 
-                       class="w-full max-w-md h-11" />
 
-                <Button @click="handleLoadClick" :disabled="!pass" 
-                        class="h-11 px-8 bg-primary hover:bg-primary/90">
+                <Input placeholder="輸入串流 URL" v-model="stream_url.url" class="w-full max-w-md h-11" />
+
+                <Button @click="handleLoadClick" :disabled="!pass" class="h-11 px-8 bg-primary hover:bg-primary/90">
                   <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                    <polygon points="5,3 19,12 5,21" fill="currentColor" />
                   </svg>
                   連接串流
                 </Button>
@@ -213,6 +218,11 @@ const InputList = computed(() => {
 
 const tabs = ref<String>('capture')
 
+// 切換 tab 時重置 LoadContent，讓用戶可以看到該 tab 的初始介面
+watch(tabs, () => {
+  LoadContent.value = false
+})
+
 const video = computed<Video>(() => {
   const type = tabs.value.toString() as VideoType
   switch (type) {
@@ -258,7 +268,7 @@ onMounted(async () => {
   try {
     await navigator.mediaDevices.getUserMedia({ video: true })
     cameraOption.value = (await navigator.mediaDevices.enumerateDevices()).filter((value) => value.kind === 'videoinput')
-    
+
     if (cameraOption.value.length > 0) {
       const firstCamera = cameraOption.value[0]
       stream.value = await getStream(firstCamera.deviceId)
